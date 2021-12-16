@@ -128,7 +128,7 @@ def easy_qq(dists, data):
     error_messages: eventual error messages for the distributions
     distargs: the fitted distributions arguments
     """
-    r2_best = 0
+    r2_best = -np.inf
     best_dist = "All suck lmao"
     data = np.sort(data)
     
@@ -162,11 +162,12 @@ def easy_qq(dists, data):
     
     quantile_list = calc_num_quantiles(data)
     n_data = len(distributions)
-    nr_row_col = int(np.sqrt(n_data))
+    nr_cols = int(np.rint(np.sqrt(n_data)))
+    nr_rows = int(np.ceil(np.sqrt(n_data)))
     
     row = 0 
     col = 0
-    _, axes = plt.subplots(nr_row_col, nr_row_col, figsize = [nr_row_col*5,nr_row_col*5])
+    _, axes = plt.subplots(nr_rows, nr_cols, figsize = [nr_rows*5,nr_rows*5])
     
     for r2_score, distribution, m, b in data_sorted:
         is_log_norm = False
@@ -177,22 +178,21 @@ def easy_qq(dists, data):
             
         distargs_fit = calc_dist_args(distribution, data)    
         quantile_distribution = distribution.ppf(quantile_list, *distargs_fit, loc = 0, scale = 1)
-
         if not is_log_norm:
-            axes[col, row].scatter(quantile_distribution, data)
-            axes[col, row].plot(quantile_distribution[:-1], quantile_distribution[:-1] * m + b)
-            axes[col, row].set_title('Verteilung: ' + str(distribution.name)+ '. R2-score: ' + str(np.round(r2_score,3)))
+            axes[row, col].scatter(quantile_distribution, data)
+            axes[row, col].plot(quantile_distribution[:-1], quantile_distribution[:-1] * m + b)
+            axes[row, col].set_title('Verteilung: ' + str(distribution.name)+ '. R2-score: ' + str(np.round(r2_score,3)))
         else:
-            axes[col, row].scatter(quantile_distribution, data)
-            axes[col, row].plot(quantile_distribution[:-1], quantile_distribution[:-1] * m + b)
-            axes[col, row].set_title('Verteilung: ' + str(stats.lognorm.name) + '. R2-score: ' + str(np.round(r2_score,3)))
+            axes[row, col].scatter(quantile_distribution, data)
+            axes[row, col].plot(quantile_distribution[:-1], quantile_distribution[:-1] * m + b)
+            axes[row, col].set_title('Verteilung: ' + str(stats.lognorm.name) + '. R2-score: ' + str(np.round(r2_score,3)))
             distribution = stats.lognorm
             data = np.exp(data)
         
-        row += 1
-        if row == nr_row_col:
-            col += 1
-            row = 0
+        col += 1
+        if col == nr_cols:
+            col = 0
+            row += 1
 
-        
+    plt.show()
     return r2_best, best_dist, r2_list, unusable_dist, error_messages
