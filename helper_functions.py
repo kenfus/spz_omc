@@ -196,3 +196,42 @@ def easy_qq(dists, data):
 
     plt.show()
     return r2_best, best_dist, r2_list, unusable_dist, error_messages
+
+
+
+# Create Features:
+
+def _day_night_cycle(datetimeindex, longest_day_year = 172):
+    day_of_year = datetimeindex.day_of_year
+
+    day_of_year = np.roll(day_of_year.to_numpy(), longest_day_year*6)
+    x_norm = 2*np.pi * day_of_year / day_of_year.max()
+
+    cos_x = (np.cos(x_norm) + 3) / 4
+    return cos_x
+
+def create_features(df_, type_, ratio_solar = 0.3):
+    assert type_ in ['normal', 'isoliert', '30_solar'], "Error! Type_ has to be either normal, isoliert or 30_solar."
+    df = df_.copy()
+    if type_ == 'normal':
+        df['Strombudget Schweiz'] = df['Summe produzierte Energie Regelblock Schweiz'] + df['Import']
+        df['Stromverbrauch Schweiz'] = df['Summe endverbrauchte Energie Regelblock Schweiz'] + df['Export']
+
+        df['Strombilanz Schweiz'] = df['Strombudget Schweiz'] - df['Stromverbrauch Schweiz']
+        # Select useful Features:
+        return df[['Strombilanz Schweiz', 'Strombudget Schweiz', 'Stromverbrauch Schweiz']]
+
+    elif type_ == 'isoliert':
+        df['Strombudget Schweiz'] = df['Summe produzierte Energie Regelblock Schweiz'] 
+        df['Stromverbrauch Schweiz'] = df['Summe endverbrauchte Energie Regelblock Schweiz']
+
+        df['Strombilanz Schweiz'] = df['Strombudget Schweiz'] - df['Stromverbrauch Schweiz']
+        return df[['Strombilanz Schweiz', 'Strombudget Schweiz', 'Stromverbrauch Schweiz']]
+    else:
+        _factor = _day_night_cycle(df.index)
+        df['Solarstrom Schweiz'] = ratio_solar * df['Summe produzierte Energie Regelblock Schweiz'] * _factor
+        df['Strombudget Schweiz'] = df['Summe produzierte Energie Regelblock Schweiz'] * (1-ratio_solar) + df['Import'] + df['Solarstrom Schweiz']
+        df['Stromverbrauch Schweiz'] = df['Summe endverbrauchte Energie Regelblock Schweiz'] + df['Export']
+
+        df['Strombilanz Schweiz'] = df['Strombudget Schweiz'] - df['Stromverbrauch Schweiz']
+        return df[['Strombilanz Schweiz', 'Strombudget Schweiz', 'Stromverbrauch Schweiz', 'Solarstrom Schweiz']]
