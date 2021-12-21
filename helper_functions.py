@@ -81,7 +81,7 @@ def calculate_m_b(x, y):
     
     return m, b, 1 - r2error
 
-def qq(data, dist):
+def qq(data, dist, quantile):
     """
     
     """
@@ -92,7 +92,13 @@ def qq(data, dist):
         data = np.log(data)
         dist = stats.norm
         is_log_norm = True
-        
+    if dist in [stats.weibull_max, stats.pareto]:
+        data_idx = np.where(data > np.quantile(data, quantile))[0]
+        data = data[data_idx]
+    if dist in [stats.weibull_min]:
+        data_idx = np.where(data < np.quantile(data, quantile))[0]
+        data = data[data_idx]
+
     #Anzahl Quantile berechnen
     distargs = calc_dist_args(dist, data)
     quantile_list = calc_num_quantiles(data)
@@ -112,7 +118,7 @@ def qq(data, dist):
     #print(np.quantile(zone1['mass'], quantile_list))
     return r2_score, dist, m, b
 
-def easy_qq(dists, data):
+def easy_qq(dists, data, quantile_for_gev = 0.1):
     """
     creates qq plots for multiple distributions at once and displays them.
     
@@ -143,7 +149,7 @@ def easy_qq(dists, data):
     
     for dist in dists:
         try:
-            r2_now, dist_now, m, b = qq(data, dist)
+            r2_now, dist_now, m, b = qq(data, dist, quantile_for_gev)
             r2_list.append(r2_now)
             distributions.append(dist)
             ms.append(m)
@@ -152,6 +158,7 @@ def easy_qq(dists, data):
                 r2_best = r2_now
                 best_dist = dist_now
         except Exception as e:
+            print(f'Error with {dist.name}: {e}')
             error_messages.append(e)
             unusable_dist.append(dist.name)
             continue
