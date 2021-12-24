@@ -4,3 +4,5 @@ statsmodels
 seaborn
 scikit-learn
 pandas
+xlrd
+openpyxl
